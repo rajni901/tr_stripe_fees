@@ -29,6 +29,10 @@
                                    help="e.g. 3.9 for 3.9% (usually higher for international)"/>
                         </group>
                         <group string="Accounting">
+                            <field name="stripe_fee_product_id"
+                                   string="Fee Line Product"
+                                   options="{'no_create': True, 'no_quick_create': True}"
+                                   help="Service product added as a line item on eCommerce orders so the cart total matches the charged amount."/>
                             <field name="stripe_fee_income_account_id"
                                    string="Fee Income Account"
                                    options="{'no_create': True, 'no_quick_create': True}"

@@ -36,6 +36,9 @@ class PaymentTransaction(models.Model):
                     _logger.info(
                         'Stripe fee applied: base=%s fee=%s total=%s', base, fee, new_amount
                     )
+                    # Add fee line to linked sale orders so order.amount_total == tx.amount.
+                    # Without this, website_sale shows "amount does not match your cart".
+                    self._stripe_add_fee_line_to_orders(fee, provider)
         return super()._get_specific_processing_values(processing_values)
 
     def _create_payment(self, **extra_create_values):
@@ -70,3 +73,32 @@ class PaymentTransaction(models.Model):
                 fee, fee_account.display_name,
             )
         return super()._create_payment(**extra_create_values)
+
+    def _stripe_add_fee_line_to_orders(self, fee, provider):
+        """Add a Stripe fee order line to linked sale orders so that
+        order.amount_total == tx.amount and website_sale's confirmation
+        page does not show the 'amount does not match cart' warning.
+        """
+        fee_product = provider.stripe_fee_product_id
+        if not fee_product:
+            return
+        sale_orders = getattr(self, 'sale_order_ids', self.env['sale.order'])
+        if not sale_orders:
+            return
+        SaleLine = self.env['sale.order.line'].sudo()
+        for order in sale_orders.sudo():
+            # Remove any previously added fee line to avoid duplicates on retry
+            order.order_line.filtered(
+                lambda l: l.product_id == fee_product
+            ).unlink()
+            SaleLine.create({
+                'order_id': order.id,
+                'product_id': fee_product.id,
+                'name': 'Stripe Processing Fee',
+                'product_uom_qty': 1,
+                'price_unit': fee,
+                'tax_id': [],
+            })
+            _logger.info(
+                'Stripe fee line added to order %s: %s', order.name, fee
+            )

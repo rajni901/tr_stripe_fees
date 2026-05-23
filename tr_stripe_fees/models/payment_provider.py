@@ -30,6 +30,13 @@ class PaymentProvider(models.Model):
              'separate credit line on the payment journal entry instead of inflating '
              'the receivable balance.',
     )
+    stripe_fee_product_id = fields.Many2one(
+        comodel_name='product.product',
+        string='Fee Line Product',
+        domain="[('type', '=', 'service'), ('sale_ok', '=', True)]",
+        help='Service product added as a fee line on eCommerce sale orders so the '
+             'order total matches the charged amount. Auto-set on install.',
+    )
 
     def _compute_stripe_fee(self, amount, is_international=False):
         if not self.stripe_fees_active:
