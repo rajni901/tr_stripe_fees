@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_payment_provider_stripe_fees" model="ir.ui.view">
+        <field name="name">payment.provider.stripe.fees</field>
+        <field name="model">payment.provider</field>
+        <field name="inherit_id" ref="payment.payment_provider_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Stripe Fees" name="stripe_fees"
+                      invisible="code != 'stripe'">
+                    <group>
+                        <field name="stripe_fees_active"
+                               widget="boolean_toggle"/>
+                    </group>
+                    <group invisible="not stripe_fees_active">
+                        <group string="Domestic Transaction Fees">
+                            <field name="stripe_fee_fixed"
+                                   string="Fixed Fee ($)"
+                                   help="e.g. 0.30 for $0.30 per transaction"/>
+                            <field name="stripe_fee_percent"
+                                   string="Percentage Fee (%)"
+                                   help="e.g. 2.9 for 2.9%"/>
+                        </group>
+                        <group string="International Transaction Fees">
+                            <field name="stripe_intl_fee_fixed"
+                                   string="Fixed Fee ($)"/>
+                            <field name="stripe_intl_fee_percent"
+                                   string="Percentage Fee (%)"
+                                   help="e.g. 3.9 for 3.9% (usually higher for international)"/>
+                        </group>
+                    </group>
+                    <div invisible="not stripe_fees_active"
+                         class="alert alert-info" style="margin-top:16px;">
+                        <strong>How it works:</strong> When a customer pays with Stripe,
+                        the fee is automatically added to their payment amount.
+                        Fee = Fixed Fee + (Order Amount × Percentage / 100).
+                        International: customer's country ≠ your company's country.
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
