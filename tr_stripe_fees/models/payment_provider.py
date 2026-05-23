@@ -22,8 +22,16 @@ class PaymentProvider(models.Model):
         string='International Percentage Fee', default=3.9,
         help='Usually higher for international cards (e.g. 3.9%)')
 
+    stripe_fee_income_account_id = fields.Many2one(
+        comodel_name='account.account',
+        string='Fee Income Account',
+        domain="[('account_type', 'like', 'income'), ('active', '=', True)]",
+        help='Revenue account for Stripe fee income. When set, the fee is posted as a '
+             'separate credit line on the payment journal entry instead of inflating '
+             'the receivable balance.',
+    )
+
     def _compute_stripe_fee(self, amount, is_international=False):
-        """Calculate the Stripe fee for a given amount."""
         if not self.stripe_fees_active:
             return 0.0
         fixed = self.stripe_intl_fee_fixed if is_international else self.stripe_fee_fixed

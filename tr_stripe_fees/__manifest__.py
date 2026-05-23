@@ -1,6 +1,6 @@
 {
     'name': 'Stripe Fees — Charge Customers Processing Fees',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
     'category': 'Accounting/Payment',
     'summary': 'Automatically add Stripe processing fees to customer payments on eCommerce checkout and invoice portal.',
     'description': """

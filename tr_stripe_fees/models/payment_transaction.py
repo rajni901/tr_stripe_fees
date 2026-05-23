@@ -21,7 +21,6 @@ class PaymentTransaction(models.Model):
         if not provider.stripe_fees_active:
             return res
 
-        # Detect international: check partner country vs company country
         is_international = False
         if self.partner_id and self.partner_id.country_id:
             company_country = self.env.company.country_id
@@ -39,3 +38,36 @@ class PaymentTransaction(models.Model):
             _logger.info('Stripe fee applied: base=%s fee=%s total=%s', base, fee, new_amount)
 
         return res
+
+    def _create_payment(self, **extra_create_values):
+        """Inject a write-off line for the Stripe fee so the journal entry reads:
+            Dr Bank:          base + fee
+              Cr Receivable:  base   (reconciles with the invoice)
+              Cr Fee Income:  fee    (posted to the configured income account)
+        """
+        if (
+            self.provider_code == 'stripe'
+            and self.stripe_fee_amount > 0
+            and self.provider_id.stripe_fee_income_account_id
+        ):
+            fee = self.stripe_fee_amount
+            fee_account = self.provider_id.stripe_fee_income_account_id
+            company_currency = self.company_id.currency_id
+            if self.currency_id == company_currency:
+                balance = -fee
+            else:
+                balance = -self.currency_id._convert(
+                    fee, company_currency, self.company_id, fields.Date.today()
+                )
+            write_off = extra_create_values.setdefault('write_off_line_vals', [])
+            write_off.append({
+                'account_id': fee_account.id,
+                'amount_currency': -fee,
+                'balance': balance,
+                'name': 'Stripe Processing Fee',
+            })
+            _logger.info(
+                'Stripe fee write-off added: fee=%s account=%s',
+                fee, fee_account.display_name,
+            )
+        return super()._create_payment(**extra_create_values)

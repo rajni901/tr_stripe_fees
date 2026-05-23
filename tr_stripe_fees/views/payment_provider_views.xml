@@ -28,6 +28,12 @@
                                    string="Percentage Fee (%)"
                                    help="e.g. 3.9 for 3.9% (usually higher for international)"/>
                         </group>
+                        <group string="Accounting">
+                            <field name="stripe_fee_income_account_id"
+                                   string="Fee Income Account"
+                                   options="{'no_create': True, 'no_quick_create': True}"
+                                   help="Optional: revenue account for the Stripe fee. When set, the fee appears as a separate credit line on the payment journal entry (Dr Bank = base+fee, Cr Receivable = base, Cr Fee Income = fee). Leave empty to keep the old behaviour (transaction amount inflated, no split entry)."/>
+                        </group>
                     </group>
                     <div invisible="not stripe_fees_active"
                          class="alert alert-info" style="margin-top:16px;">
