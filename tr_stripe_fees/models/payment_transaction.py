@@ -13,31 +13,30 @@ class PaymentTransaction(models.Model):
         string='Base Amount', currency_field='currency_id', readonly=True)
 
     def _get_specific_processing_values(self, processing_values):
-        res = super()._get_specific_processing_values(processing_values)
-        if self.provider_code != 'stripe':
-            return res
-
-        provider = self.provider_id
-        if not provider.stripe_fees_active:
-            return res
-
-        is_international = False
-        if self.partner_id and self.partner_id.country_id:
-            company_country = self.env.company.country_id
-            is_international = self.partner_id.country_id != company_country
-
-        fee = provider._compute_stripe_fee(self.amount, is_international)
-        if fee > 0:
-            base = self.amount
-            new_amount = base + fee
-            self.write({
-                'amount': new_amount,
-                'stripe_fee_amount': fee,
-                'stripe_base_amount': base,
-            })
-            _logger.info('Stripe fee applied: base=%s fee=%s total=%s', base, fee, new_amount)
-
-        return res
+        # Fee must be applied BEFORE super() because Stripe's override creates the
+        # PaymentIntent (using self.amount) inside that super() call. Applying it after
+        # would create a PI for the base amount while storing the inflated amount on the
+        # transaction, causing a "amounts don't match" validation error on the webhook.
+        if self.provider_code == 'stripe' and not self.stripe_fee_amount:
+            provider = self.provider_id
+            if provider.stripe_fees_active:
+                is_international = False
+                if self.partner_id and self.partner_id.country_id:
+                    company_country = self.env.company.country_id
+                    is_international = self.partner_id.country_id != company_country
+                fee = provider._compute_stripe_fee(self.amount, is_international)
+                if fee > 0:
+                    base = self.amount
+                    new_amount = base + fee
+                    self.write({
+                        'amount': new_amount,
+                        'stripe_fee_amount': fee,
+                        'stripe_base_amount': base,
+                    })
+                    _logger.info(
+                        'Stripe fee applied: base=%s fee=%s total=%s', base, fee, new_amount
+                    )
+        return super()._get_specific_processing_values(processing_values)
 
     def _create_payment(self, **extra_create_values):
         """Inject a write-off line for the Stripe fee so the journal entry reads:
