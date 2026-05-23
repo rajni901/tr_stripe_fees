@@ -97,7 +97,7 @@ class PaymentTransaction(models.Model):
                 'name': 'Stripe Processing Fee',
                 'product_uom_qty': 1,
                 'price_unit': fee,
-                'tax_id': [],
+                'tax_ids': [],
             })
             _logger.info(
                 'Stripe fee line added to order %s: %s', order.name, fee
